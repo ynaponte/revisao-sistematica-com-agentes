@@ -15,7 +15,7 @@ from .prompts import SCREENING_SYSTEM_PROMPT
 logger = logging.getLogger(__name__)
 
 
-def agent_node(state: ScreeningState, runtime: Runtime[ScreeningContext]) -> ScreeningState:
+async def agent_node(state: ScreeningState, runtime: Runtime[ScreeningContext]) -> ScreeningState:
     context = runtime.context
     
     llm = get_llm(context.get("provider"))
@@ -23,7 +23,7 @@ def agent_node(state: ScreeningState, runtime: Runtime[ScreeningContext]) -> Scr
         model=llm,
         system_prompt=SCREENING_SYSTEM_PROMPT
     )
-    response = agent.invoke({"messages": state.get("messages")})
+    response = await agent.ainvoke({"messages": state.get("messages")})
     logger.info("Agente terminou a execução")
     return response
 

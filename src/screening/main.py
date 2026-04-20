@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import logging
 import os
 import sys
-import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -105,6 +105,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
              "(default: 4.0).",
     )
     p.add_argument(
+        "--concurrency", "-c",
+        type=int,
+        default=1,
+        help="Number of articles to process concurrently (default: 1).",
+    )
+    p.add_argument(
         "--log",
         default="screening.log",
         help="Path to save the terminal log output (default: screening.log).",
@@ -116,13 +122,66 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 # Main logic
 # ---------------------------------------------------------------------------
 
-def main(argv: list[str] | None = None) -> None:
-    # Load .env from the project root (or cwd)
+async def _screen_article(
+    idx: int,
+    total: int,
+    article: Article,
+    graph,
+    context: ScreeningContext,
+    inclusion: list[str],
+    exclusion: list[str],
+    semaphore: asyncio.Semaphore,
+    delay: float,
+) -> dict:
+    """Corrotina que processa um único artigo sob o controle do semaphore."""
+    async with semaphore:
+        _log_progress(idx, total, article)
+
+        config = RunnableConfig(
+            configurable={"thread_id": str(article.id)}
+        )
+        human_text = build_human_prompt(article, inclusion, exclusion)
+
+        try:
+            output = await graph.ainvoke(
+                {"messages": HumanMessage(content=human_text)},
+                config=config,
+                context=context,
+            )
+
+            result = output
+
+            if result["decision"] == "ACCEPTED":
+                logger.info(f"   [{article.id}] → ✅ ACCEPTED")
+            else:
+                reasons = ", ".join(result["rejection_reasons"])
+                logger.info(f"   [{article.id}] → ❌ REJECTED ({reasons})")
+
+        except Exception as e:
+            error_str = str(e).lower()
+
+            if any(term in error_str for term in ["429", "quota", "exhausted", "limit", "too many requests"]):
+                logger.error(f"🛑 CRITICAL: API Limit / Quota exceeded on article {article.id}! Error: {e}")
+                # Propaga para cancelar as demais tasks via gather(return_exceptions=False)
+                raise
+            else:
+                logger.error(f"   ⚠️  Generic error processing article {article.id}: {e}")
+                result = {
+                    "decision": "REJECTED",
+                    "rejection_reasons": ["ERROR"],
+                    "justification": f"Processing error: {e}",
+                }
+
+        if delay > 0:
+            await asyncio.sleep(delay)
+
+        return result
+
+
+async def _main(argv: list[str] | None = None) -> None:
     load_dotenv()
 
     args = parse_args(argv)
-
-    # Initialize logging
     setup_logging(args.log)
 
     logger.info("Starting new screening session...")
@@ -156,115 +215,58 @@ def main(argv: list[str] | None = None) -> None:
         logger.info(f"   E{i}: {c}")
     logger.info("")
 
-    # A formatação agora ocorre isoladamente por artigo via função em prompts.py
-
     # -- Build graph --
     provider_label = args.provider or "env/default"
     logger.info(f"🤖 Initializing Graph (provider: {provider_label})...")
     graph = build_graph()
     logger.info("   Graph compiled successfully.\n")
 
-    # -- Seção de configuração do grafo --
-    
     context: ScreeningContext = {"provider": provider_label}
 
-    # -- Process articles --
-    results: list[dict] = []
     total = len(articles)
-    accepted = 0
-    rejected = 0
-
     logger.info(f"{'='*60}")
-    logger.info(f" Screening {total} articles")
+    logger.info(f" Screening {total} articles (concurrency={args.concurrency})")
     logger.info(f"{'='*60}\n")
 
-    # Helper para descobrir a posição no range fornecido.
-    # Se '--rows 837-1110' -> start_row_offset será 837. 
-    start_row_offset = 1
-    if args.rows:
-        try:
-            start_row_offset = int(args.rows.split("-")[0])
-        except Exception:
-            pass
+    semaphore = asyncio.Semaphore(args.concurrency)
 
-    for idx, article in enumerate(articles, start=1):
-        _log_progress(idx, total, article)
-        
-        config = RunnableConfig(
-            configurable={
-                "thread_id": str(article.id)
-            }
-        )    
-        human_text = build_human_prompt(
-            article, args.inclusion, args.exclusion
+    tasks = [
+        _screen_article(
+            idx=idx,
+            total=total,
+            article=article,
+            graph=graph,
+            context=context,
+            inclusion=args.inclusion,
+            exclusion=args.exclusion,
+            semaphore=semaphore,
+            delay=args.delay,
         )
+        for idx, article in enumerate(articles, start=1)
+    ]
 
-        try:
-            output = graph.invoke(
-                {"messages": HumanMessage(content=human_text)},
-                config=config,
-                context=context
-            )
-            
-            # O output agora é um OutputState nativo.
-            result = output
-            
-            results.append(result)
+    # return_exceptions=True para que um erro de quota não cancele tasks já concluídas
+    raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            if result["decision"] == "ACCEPTED":
-                accepted += 1
-                logger.info("   → ✅ ACCEPTED")
-            else:
-                reasons = ", ".join(result["rejection_reasons"])
-                logger.info(f"   → ❌ REJECTED ({reasons})")
-                rejected += 1
+    # Separar resultados válidos de exceções
+    results: list[dict] = []
+    processed_articles: list[Article] = []
 
-        except Exception as e:
-            error_str = str(e).lower()
-            
-            # ------------------------------------------------------------
-            # Proteção contra Abuso de Limite (Quotas/RateLimits)
-            # ------------------------------------------------------------
+    for article, outcome in zip(articles, raw_results):
+        if isinstance(outcome, BaseException):
+            error_str = str(outcome).lower()
             if any(term in error_str for term in ["429", "quota", "exhausted", "limit", "too many requests"]):
-                logger.error(f"🛑 CRITICAL: API Limit / Quota exceeded during article {article.id}! Error: {e}")
-                
-                # Identificar aonde o robô parou com sucesso
-                last_successful_idx = idx - 1
-                last_successful_global_row = start_row_offset + last_successful_idx - 1
-                
-                logger.warning("")
-                logger.warning("=====================================================")
-                logger.warning(f"⚠️ EXECUTION HALTED TO PREVENT PROGRESS LOSS ⚠️")
-                logger.warning(f"   Last fully processed successfully: ")
-                logger.warning(f"   -> Relative index in loop: {last_successful_idx} of {total}")
-                logger.warning(f"   -> Immediate previous row (parameter for --rows) was around: {last_successful_global_row}")
-                
-                if last_successful_idx > 0:
-                    logger.warning(f"   On your next run, you should probably start at: --rows {last_successful_global_row + 1}-...")
-                else:
-                    logger.warning(f"   No articles were processed successfully in this batch.")
-                logger.warning("=====================================================\n")
-
-                break # Sai do loop para pular pros steps de salvamento
+                logger.warning(f"   Skipping article {article.id} due to quota error.")
             else:
-                logger.error(f"   ⚠️  Generic error processing article {article.id}: {e}")
-                # Create a fallback REJECTED result to not lose track
-                result = {
-                    "decision": "REJECTED",
-                    "rejection_reasons": ["ERROR"],
-                    "justification": f"Processing error: {e}",
-                }
-                results.append(result)
-                rejected += 1
+                logger.warning(f"   Skipping article {article.id} due to unexpected error: {outcome}")
+            continue
+        results.append(outcome)
+        processed_articles.append(article)
 
-        # Rate-limit delay (skip on last article)
-        if idx < total and args.delay > 0:
-            time.sleep(args.delay)
+    accepted = sum(1 for r in results if r["decision"] == "ACCEPTED")
+    rejected = len(results) - accepted
 
-    # Precisamos fatiar (slice) os `articles` caso tenhamos feito o break protegendo contra limitação
-    processed_articles = articles[:len(results)]
-    
-    # Montar os metadados de execução para a planilha
+    # -- Metadados --
     if provider_label == "gemini":
         model_used = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
     elif provider_label == "ollama":
@@ -278,6 +280,7 @@ def main(argv: list[str] | None = None) -> None:
         "Provider": provider_label,
         "Model": model_used,
         "Delay": f"{args.delay}s",
+        "Concurrency": str(args.concurrency),
         "Range": args.rows if args.rows else "All",
         "Total Analyzed": str(len(processed_articles)),
     }
@@ -290,6 +293,10 @@ def main(argv: list[str] | None = None) -> None:
     logger.info(f"💾 Writing partial/full results to: {output_path}")
     write_results(processed_articles, results, args.inclusion, args.exclusion, output_path, metadata=metadata)
     logger.info("   Done! ✨\n")
+
+
+def main(argv: list[str] | None = None) -> None:
+    asyncio.run(_main(argv))
 
 
 def _log_progress(idx: int, total: int, article: Article) -> None:
