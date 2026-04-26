@@ -1,4 +1,4 @@
-"""Spreadsheet I/O: read articles from .xls and write results to .xlsx."""
+"""Spreadsheet I/O: read articles from .csv, .xls, and .xlsx, and write results to .xlsx."""
 
 from __future__ import annotations
 
@@ -11,15 +11,6 @@ from openpyxl.styles import Alignment, Font, PatternFill
 
 from .models import Article
 
-# ---------------------------------------------------------------------------
-# Reading
-# ---------------------------------------------------------------------------
-
-_COL_ID = 0
-_COL_TITLE = 1
-_COL_ABSTRACT = 4
-_DATA_START_ROW = 8
-
 
 def parse_row_range(row_range_str: str, total_data_rows: int) -> tuple[int, int]:
     parts = row_range_str.strip().split("-")
@@ -29,22 +20,86 @@ def parse_row_range(row_range_str: str, total_data_rows: int) -> tuple[int, int]
     start = int(parts[0]) - 1
     end = int(parts[1]) - 1
     end = min(end, total_data_rows - 1)
-    return start, end
+    return max(0, start), max(0, end)
+
+
+def _find_metadata(df: pd.DataFrame) -> dict | None:
+    """Scans the dataframe heuristically to find the header row and column indices."""
+    for row_idx in range(min(50, len(df))):
+        row = df.iloc[row_idx]
+        title_col_idx = None
+        abstract_col_idx = None
+        id_col_idx = None
+        
+        for col_idx, cell_value in enumerate(row):
+            val = str(cell_value).lower().strip()
+            # Common matches for Title
+            if not title_col_idx and ("title" in val or "título" in val or "titulo" in val):
+                title_col_idx = col_idx
+            # Common matches for Abstract
+            elif not abstract_col_idx and ("abstract" in val or "resumo" in val):
+                abstract_col_idx = col_idx
+            # Common matches for ID
+            elif not id_col_idx and val in ["id", "identificador", "key", "nº", "no.", "n"]:
+                id_col_idx = col_idx
+                
+        if title_col_idx is not None and abstract_col_idx is not None:
+            return {
+                "header_row": row_idx,
+                "title_col": title_col_idx,
+                "abstract_col": abstract_col_idx,
+                "id_col": id_col_idx
+            }
+    return None
 
 
 def load_articles(
     path: str | Path,
-    sheet_name: str = "Papers",
+    sheet_name: str | None = None,
     row_range: str | None = None,
 ) -> list[Article]:
-    # O Pandas utiliza a dependência xlrd por debaixo dos panos se instalada
-    df = pd.read_excel(str(path), sheet_name=sheet_name, header=None, engine="xlrd")
-
-    # Calculamos as linhas físicas baseados na interface do array numpy retornado
-    total_data_rows = len(df) - _DATA_START_ROW
-    if total_data_rows <= 0:
+    path_obj = Path(path)
+    path_str = str(path_obj).lower()
+    dfs = {}
+    
+    try:
+        if path_str.endswith('.csv'):
+            dfs['csv_data'] = pd.read_csv(path_obj, header=None)
+        elif path_str.endswith('.xls'):
+            dfs = pd.read_excel(path_obj, sheet_name=None, header=None, engine="xlrd")
+        elif path_str.endswith('.xlsx'):
+            dfs = pd.read_excel(path_obj, sheet_name=None, header=None, engine="openpyxl")
+        else:
+            # Fallback attempt
+            try:
+                dfs = pd.read_excel(path_obj, sheet_name=None, header=None)
+            except Exception:
+                dfs['csv_data'] = pd.read_csv(path_obj, header=None)
+    except Exception as e:
+        print(f"Failed to load file {path}: {e}")
         return []
 
+    selected_df = None
+    meta = None
+    
+    # Heuristic search across all sheets to find the first valid one
+    for s_name, df in dfs.items():
+        if df.empty:
+            continue
+        meta = _find_metadata(df)
+        if meta:
+            selected_df = df
+            break
+            
+    if selected_df is None or meta is None:
+        return []
+        
+    start_data_row = meta["header_row"] + 1
+    total_data_rows = len(selected_df) - start_data_row
+    
+    if total_data_rows <= 0:
+        return []
+        
     if row_range:
         range_start, range_end = parse_row_range(row_range, total_data_rows)
     else:
@@ -52,36 +107,45 @@ def load_articles(
 
     articles: list[Article] = []
     
-    # Iteração elegante baseada em iloc do Pandas
     for i in range(range_start, range_end + 1):
-        row_idx = _DATA_START_ROW + i
-        if row_idx >= len(df):
+        row_idx = start_data_row + i
+        if row_idx >= len(selected_df):
             break
-
-        row_data = df.iloc[row_idx]
-        raw_id = row_data[_COL_ID]
-
-        if pd.isna(raw_id) or not isinstance(raw_id, (int, float)) or raw_id <= 0:
-            continue
             
-        title = str(row_data[_COL_TITLE]).strip()
-        abstract = str(row_data[_COL_ABSTRACT]).strip()
+        row_data = selected_df.iloc[row_idx]
+        
+        # Extract ID
+        if meta["id_col"] is not None:
+            raw_id = row_data[meta["id_col"]]
+            if pd.isna(raw_id):
+                raw_id = i + 1
+        else:
+            raw_id = i + 1
+            
+        try:
+            # Handle cases where ID is a float like "1.0" or string
+            art_id = int(float(raw_id)) if str(raw_id).replace('.','',1).isdigit() else i + 1
+        except ValueError:
+            art_id = i + 1
+            
+        title = str(row_data[meta["title_col"]]).strip()
+        abstract = str(row_data[meta["abstract_col"]]).strip()
+        
+        # Skip empty rows where title is missing
+        if not title or title.lower() == "nan":
+            continue
 
         articles.append(
             Article(
-                id=int(raw_id),
+                id=art_id,
                 title=title,
-                abstract=abstract if (abstract and abstract != "nan") else "(no abstract available)",
+                abstract=abstract if (abstract and abstract.lower() != "nan") else "(no abstract available)",
                 row_index=row_idx,
             )
         )
 
     return articles
 
-
-# ---------------------------------------------------------------------------
-# Writing
-# ---------------------------------------------------------------------------
 
 def write_results(
     articles: Sequence[Article],
@@ -91,10 +155,9 @@ def write_results(
     output_path: str | Path,
     metadata: dict[str, str] | None = None,
 ) -> Path:
-    """Export results to an Excel file using Pandas."""
+    """Export results to an Excel file using Pandas, with styled rows."""
     output_path = Path(output_path)
     
-    # Prepare data for DataFrame
     data = []
     for article, result in zip(articles, results):
         data.append({
@@ -108,20 +171,16 @@ def write_results(
         
     df = pd.DataFrame(data)
     
-    # In Pandas, it's easier to write data first
+    # Create the writer
     with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-        # If there's metadata, we might want to slip it in, but usually 
-        # it's cleaner to put metadata in a separate sheet or just above.
-        # Given pandas writes df at row 0 or specified row:
         start_row = 0
         if metadata:
             meta_df = pd.DataFrame([metadata])
             meta_df.to_excel(writer, sheet_name="Screening Results", index=False, startrow=0)
-            start_row = 3 # Leave space for metadata
+            start_row = 3
             
         df.to_excel(writer, sheet_name="Screening Results", index=False, startrow=start_row)
 
-        # Basic styling with openpyxl 
         ws = writer.sheets["Screening Results"]
         
         # Adjust column widths
@@ -136,7 +195,7 @@ def write_results(
                 cell.alignment = wrap_alignment
                 
         # Color specific decisions
-        decision_col_idx = 4 # 1-based index for decision in the D column
+        decision_col_idx = 4 # 1-based index for 'Decision' column
         for row in ws.iter_rows(min_row=start_row + 2, max_row=ws.max_row):
             decision_cell = row[decision_col_idx - 1]
             if decision_cell.value == "ACCEPTED":
