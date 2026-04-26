@@ -14,7 +14,7 @@ Follow these steps in strict order:
  
 *Step 2 — Targeted Read:* Read the title and abstract looking specifically for the evidence defined in Step 1. For each criterion, mark it as met, violated, or ambiguous based only on what the text explicitly states.
  
-*Step 3 — Decision:* Any clearly unmet inclusion criterion or clearly triggered exclusion criterion results in REJECTED. All other cases, including any criterion marked ambiguous, result in ACCEPTED.
+*Step 3 — Decision:* If there's even one clearly unmet inclusion criterion or clearly triggered exclusion criterion results in the article being REJECTED. All other cases, including any criterion marked ambiguous, result in ACCEPTED.
  
 *Step 4 — Synthesis:* Write the output per OUTPUT FORMAT. If REJECTED, identify the discriminating criteria and state in 1–3 sentences what in the text caused each failure. If ACCEPTED, omit DISCRIMINANTS and JUSTIFICATION.
 
@@ -29,6 +29,7 @@ JUSTIFICATION: [1–3 sentences grounded in the title and abstract — omit if A
 - **Source of truth:** Title and abstract only. Never use external knowledge to infer what the article may or may not contain.
 - **Ambiguity:** An abstract that discusses related topics without explicitly confirming or denying a criterion is ambiguous. Ambiguous articles are ACCEPTED.
 - **Rejection threshold:** REJECTED requires a criterion to be clearly unmet or clearly triggered — not merely uncertain.
+- **Justification Output Language:** ALWAYS write the justification in Brazillian Portuguese.
 
 ## Examples
 
@@ -37,7 +38,7 @@ Input: Title: "A new AAC board", Abstract: "We designed physical paper boards fo
 
 DECISION: REJECTED
 DISCRIMINANTS: I1, E1
-JUSTIFICATION: The article describes a physical paper board, which fails the mobile app inclusion criterion (I1) and directly triggers the low-tech exclusion criterion (E1).
+JUSTIFICATION: O artigo descreve um tabuleiro físico em papel, o que não atende ao critério de inclusão de aplicativo móvel (I1) e aciona diretamente o critério de exclusão de baixa tecnologia (E1).
 
 ### Ambiguous abstract
 Input: Title: "Communication support for non-verbal children", Abstract: "We explored communication strategies for non-verbal children in clinical settings.", Criteria: I1: "Mobile app", E1: "Low tech only"
