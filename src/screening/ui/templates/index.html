@@ -1,35 +1,250 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
+<div class="max-w-4xl mx-auto" id="config-container">
     <div class="mb-10 text-center">
         <h1 class="text-4xl md:text-5xl font-bold mb-4">Start a <span class="text-gradient">Systematic Review</span></h1>
         <p class="text-slate-400 text-lg max-w-2xl mx-auto">Upload your corpus, define your inclusion and exclusion criteria, and let the AI agent do the heavy lifting with maximum precision.</p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 hover:border-indigo-500/50 transition-colors group cursor-pointer">
-            <div class="bg-indigo-500/20 w-12 h-12 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <i class="fa-solid fa-file-excel text-indigo-400 text-xl"></i>
+    <form id="job-form" class="space-y-8">
+        
+        <!-- Step 1: Upload -->
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 transition-colors group">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="bg-indigo-500/20 w-10 h-10 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i>
+                </div>
+                <h3 class="text-xl font-semibold">1. Upload Corpus</h3>
             </div>
-            <h3 class="text-xl font-semibold mb-2">1. Upload Corpus</h3>
-            <p class="text-slate-400 text-sm">Support for .csv, .xls, and .xlsx files. We automatically detect metadata and process large datasets efficiently.</p>
+            
+            <div id="dropzone" class="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-slate-800/60 transition-all">
+                <i class="fa-solid fa-file-excel text-4xl text-slate-500 mb-4" id="dropzone-icon"></i>
+                <h4 class="text-lg font-medium text-slate-300" id="dropzone-text">Drag and drop your spreadsheet here</h4>
+                <p class="text-sm text-slate-500 mt-2">Supports .csv, .xls, .xlsx</p>
+                <input type="file" id="file-input" accept=".csv, .xls, .xlsx" class="hidden">
+            </div>
+            <div id="file-info" class="hidden mt-4 bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-file-csv text-indigo-400"></i>
+                    <span id="file-name" class="font-medium text-slate-200">filename.csv</span>
+                </div>
+                <button type="button" id="remove-file" class="text-slate-400 hover:text-red-400 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
         </div>
 
-        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 hover:border-purple-500/50 transition-colors group cursor-pointer">
-            <div class="bg-purple-500/20 w-12 h-12 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <i class="fa-solid fa-list-check text-purple-400 text-xl"></i>
+        <!-- Step 2: Criteria -->
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 transition-colors">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="bg-purple-500/20 w-10 h-10 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-list-check text-purple-400"></i>
+                </div>
+                <h3 class="text-xl font-semibold">2. Define Criteria</h3>
             </div>
-            <h3 class="text-xl font-semibold mb-2">2. Define Criteria</h3>
-            <p class="text-slate-400 text-sm">Specify custom inclusion and exclusion rules. The AI will strictly follow these to classify each abstract.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Inclusion -->
+                <div>
+                    <h4 class="font-medium text-emerald-400 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-plus-circle"></i> Inclusion Criteria
+                    </h4>
+                    <ul id="inclusion-list" class="space-y-3 mb-3"></ul>
+                    <div class="flex gap-2">
+                        <input type="text" id="inc-input" placeholder="e.g. Study uses machine learning..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
+                        <button type="button" onclick="addCriterion('inclusion')" class="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-3 py-2 rounded-lg transition-colors">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Exclusion -->
+                <div>
+                    <h4 class="font-medium text-red-400 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-minus-circle"></i> Exclusion Criteria
+                    </h4>
+                    <ul id="exclusion-list" class="space-y-3 mb-3"></ul>
+                    <div class="flex gap-2">
+                        <input type="text" id="exc-input" placeholder="e.g. Study is a literature review..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-500 transition-colors">
+                        <button type="button" onclick="addCriterion('exclusion')" class="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-2 rounded-lg transition-colors">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-    
-    <div class="mt-12 flex justify-center">
-        <button class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-3 px-8 rounded-full shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-2 transform hover:-translate-y-1">
-            <span>Configure New Job</span>
-            <i class="fa-solid fa-arrow-right"></i>
-        </button>
-    </div>
+
+        <!-- Step 3: Provider -->
+        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 transition-colors flex justify-between items-center flex-wrap gap-4">
+            <div>
+                <h3 class="text-xl font-semibold flex items-center gap-3">
+                    <div class="bg-blue-500/20 w-10 h-10 rounded-lg flex items-center justify-center">
+                        <i class="fa-solid fa-microchip text-blue-400"></i>
+                    </div>
+                    3. AI Provider
+                </h3>
+            </div>
+            <select id="provider" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer text-slate-200">
+                <option value="gemini">Google Gemini (Recommended)</option>
+                <option value="openai">OpenAI GPT</option>
+                <option value="vllm">vLLM (Local)</option>
+                <option value="ollama">Ollama (Local)</option>
+            </select>
+        </div>
+        
+        <div class="mt-8 flex justify-center">
+            <button type="submit" id="submit-btn" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-3 px-10 rounded-full shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-3 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                <span id="submit-text">Start AI Screening</span>
+                <i class="fa-solid fa-rocket" id="submit-icon"></i>
+            </button>
+        </div>
+    </form>
 </div>
+
+<!-- Scripts for Interaction -->
+<script>
+    // State
+    let selectedFile = null;
+    let inclusionCriteria = [];
+    let exclusionCriteria = [];
+
+    // Elements
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    const fileInfo = document.getElementById('file-info');
+    const fileName = document.getElementById('file-name');
+    const removeFileBtn = document.getElementById('remove-file');
+    const form = document.getElementById('job-form');
+    
+    // File Drag & Drop
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('border-indigo-500', 'bg-slate-800/60');
+    });
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('border-indigo-500', 'bg-slate-800/60');
+    });
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-indigo-500', 'bg-slate-800/60');
+        if (e.dataTransfer.files.length) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+    removeFileBtn.addEventListener('click', () => {
+        selectedFile = null;
+        fileInput.value = "";
+        fileInfo.classList.add('hidden');
+        dropzone.classList.remove('hidden');
+    });
+
+    function handleFile(file) {
+        const validExt = ['.csv', '.xls', '.xlsx'];
+        const isMatch = validExt.some(ext => file.name.toLowerCase().endsWith(ext));
+        if(!isMatch) {
+            alert('Invalid file format. Only .csv, .xls, .xlsx allowed.');
+            return;
+        }
+        selectedFile = file;
+        fileName.textContent = file.name;
+        dropzone.classList.add('hidden');
+        fileInfo.classList.remove('hidden');
+    }
+
+    // Dynamic Criteria Lists
+    function renderCriteria() {
+        const incUl = document.getElementById('inclusion-list');
+        const excUl = document.getElementById('exclusion-list');
+        
+        incUl.innerHTML = inclusionCriteria.map((c, i) => `
+            <li class="bg-slate-900 border border-slate-700 rounded-lg p-2 flex justify-between items-center text-sm group transition-colors hover:border-emerald-500/50">
+                <span>${c}</span>
+                <button type="button" onclick="removeCriterion('inclusion', ${i})" class="text-slate-500 hover:text-red-400 opacity-0 md:opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"><i class="fa-solid fa-trash"></i></button>
+            </li>
+        `).join('');
+
+        excUl.innerHTML = exclusionCriteria.map((c, i) => `
+            <li class="bg-slate-900 border border-slate-700 rounded-lg p-2 flex justify-between items-center text-sm group transition-colors hover:border-red-500/50">
+                <span>${c}</span>
+                <button type="button" onclick="removeCriterion('exclusion', ${i})" class="text-slate-500 hover:text-red-400 opacity-0 md:opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"><i class="fa-solid fa-trash"></i></button>
+            </li>
+        `).join('');
+    }
+
+    function addCriterion(type) {
+        const input = document.getElementById(type === 'inclusion' ? 'inc-input' : 'exc-input');
+        const val = input.value.trim();
+        if (val) {
+            if (type === 'inclusion') inclusionCriteria.push(val);
+            else exclusionCriteria.push(val);
+            input.value = '';
+            renderCriteria();
+        }
+    }
+    
+    // allow enter key
+    document.getElementById('inc-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') { e.preventDefault(); addCriterion('inclusion'); }});
+    document.getElementById('exc-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') { e.preventDefault(); addCriterion('exclusion'); }});
+
+    window.removeCriterion = function(type, index) {
+        if (type === 'inclusion') inclusionCriteria.splice(index, 1);
+        else exclusionCriteria.splice(index, 1);
+        renderCriteria();
+    }
+
+    // Submit
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!selectedFile) return alert('Please upload a spreadsheet corpus.');
+        if (inclusionCriteria.length === 0) return alert('Please add at least one inclusion criterion.');
+        if (exclusionCriteria.length === 0) return alert('Please add at least one exclusion criterion.');
+
+        const submitBtn = document.getElementById('submit-btn');
+        const submitText = document.getElementById('submit-text');
+        const submitIcon = document.getElementById('submit-icon');
+        
+        submitBtn.disabled = true;
+        submitText.textContent = "Uploading & Starting...";
+        submitIcon.className = "fa-solid fa-spinner fa-spin";
+
+        const provider = document.getElementById('provider').value;
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('inclusion', JSON.stringify(inclusionCriteria));
+        formData.append('exclusion', JSON.stringify(exclusionCriteria));
+        formData.append('provider', provider);
+
+        try {
+            const res = await fetch('/api/screen', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.detail || 'Error uploading job');
+            
+            // Go to dashboard/progress view (mock navigation for now, will implement in 2.3)
+            window.location.href = `/?job_id=${data.job_id}`;
+
+        } catch (error) {
+            alert(error.message);
+            submitBtn.disabled = false;
+            submitText.textContent = "Start AI Screening";
+            submitIcon.className = "fa-solid fa-rocket";
+        }
+    });
+
+    // Populate default lists for quick testing
+    inclusionCriteria.push("The paper evaluates machine learning models for natural language processing.");
+    exclusionCriteria.push("The paper is a survey or literature review.");
+    renderCriteria();
+</script>
 {% endblock %}
