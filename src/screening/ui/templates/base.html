@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRA - Systematic Review Agent</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        glass: 'rgba(30, 41, 59, 0.7)',
+                        glassBorder: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: var(--tw-colors-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--tw-colors-glassBorder);
+            border-radius: 1rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(90deg, #818cf8, #c084fc);
+        }
+    </style>
+</head>
+<body class="antialiased flex flex-col h-screen overflow-hidden">
+    
+    <!-- Navbar -->
+    <header class="glass-panel mx-4 mt-4 px-6 py-4 flex items-center justify-between z-10 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 w-10 h-10 rounded-lg flex items-center justify-center shadow-lg">
+                <i class="fa-solid fa-robot text-white text-xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight">SRA <span class="text-indigo-400 font-light">Agent</span></h1>
+        </div>
+        <nav class="hidden md:flex gap-6">
+            <a href="/" class="text-indigo-300 hover:text-white transition-colors font-medium">Dashboard</a>
+            <a href="#" class="text-slate-400 hover:text-white transition-colors font-medium">History</a>
+            <a href="#" class="text-slate-400 hover:text-white transition-colors font-medium">Settings</a>
+        </nav>
+        <div class="flex items-center gap-4">
+            <button class="w-10 h-10 rounded-full glass-panel flex items-center justify-center hover:bg-slate-800 transition-colors">
+                <i class="fa-regular fa-bell text-slate-300"></i>
+            </button>
+            <div class="w-10 h-10 rounded-full bg-indigo-900 border border-indigo-500 overflow-hidden flex items-center justify-center">
+                <i class="fa-solid fa-user text-indigo-300"></i>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden mt-4 mx-4 mb-4 gap-4">
+        <!-- Sidebar -->
+        <aside class="glass-panel w-64 hidden lg:flex flex-col p-4 shrink-0">
+            <div class="mb-8 mt-4 px-2">
+                <h2 class="text-xs uppercase tracking-wider text-slate-500 font-bold mb-4">Main Menu</h2>
+                <ul class="space-y-2">
+                    <li>
+                        <a href="/" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 transition-all">
+                            <i class="fa-solid fa-layer-group w-5"></i>
+                            <span>New Screening</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                            <i class="fa-solid fa-chart-pie w-5"></i>
+                            <span>Analytics</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+                            <i class="fa-solid fa-database w-5"></i>
+                            <span>Corpus</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="mt-auto px-2 pb-4">
+                <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-server text-emerald-400 text-xs"></i>
+                        <span class="text-sm font-semibold text-slate-300">System Status</span>
+                    </div>
+                    <p class="text-xs text-slate-500">API is online and ready for tasks.</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="glass-panel flex-1 overflow-y-auto p-8 relative">
+            <!-- Decorative blur blobs -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 pointer-events-none"></div>
+            <div class="absolute bottom-0 left-0 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 pointer-events-none"></div>
+            
+            <div class="relative z-10">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>
