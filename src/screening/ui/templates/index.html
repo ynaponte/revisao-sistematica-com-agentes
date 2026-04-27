@@ -4,8 +4,8 @@
 <!-- Configuration View -->
 <div class="max-w-4xl mx-auto" id="config-container">
     <div class="mb-10 text-center">
-        <h1 class="text-4xl md:text-5xl font-bold mb-4">Start a <span class="text-gradient">Systematic Review</span></h1>
-        <p class="text-slate-400 text-lg max-w-2xl mx-auto">Upload your corpus, define your inclusion and exclusion criteria, and let the AI agent do the heavy lifting with maximum precision.</p>
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">Inicie uma <span class="text-gradient">Revisão Sistemática</span></h1>
+        <p class="text-slate-400 text-lg max-w-2xl mx-auto">Faça o upload do seu corpus, defina seus critérios de inclusão e exclusão e deixe o agente de IA fazer o trabalho pesado com precisão máxima.</p>
     </div>
 
     <form id="job-form" class="space-y-8">
@@ -16,13 +16,13 @@
                 <div class="bg-indigo-500/20 w-10 h-10 rounded-lg flex items-center justify-center">
                     <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i>
                 </div>
-                <h3 class="text-xl font-semibold">1. Upload Corpus</h3>
+                <h3 class="text-xl font-semibold">1. Carregar Corpus</h3>
             </div>
             
             <div id="dropzone" class="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-slate-800/60 transition-all">
                 <i class="fa-solid fa-file-excel text-4xl text-slate-500 mb-4" id="dropzone-icon"></i>
-                <h4 class="text-lg font-medium text-slate-300" id="dropzone-text">Drag and drop your spreadsheet here</h4>
-                <p class="text-sm text-slate-500 mt-2">Supports .csv, .xls, .xlsx</p>
+                <h4 class="text-lg font-medium text-slate-300" id="dropzone-text">Arraste e solte sua planilha aqui</h4>
+                <p class="text-sm text-slate-500 mt-2">Suporta .csv, .xls, .xlsx</p>
                 <input type="file" id="file-input" accept=".csv, .xls, .xlsx" class="hidden">
             </div>
             <div id="file-info" class="hidden mt-4 bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 flex justify-between items-center">
@@ -42,18 +42,18 @@
                 <div class="bg-purple-500/20 w-10 h-10 rounded-lg flex items-center justify-center">
                     <i class="fa-solid fa-list-check text-purple-400"></i>
                 </div>
-                <h3 class="text-xl font-semibold">2. Define Criteria</h3>
+                <h3 class="text-xl font-semibold">2. Definir Critérios</h3>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Inclusion -->
                 <div>
                     <h4 class="font-medium text-emerald-400 mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-plus-circle"></i> Inclusion Criteria
+                        <i class="fa-solid fa-plus-circle"></i> Critérios de Inclusão
                     </h4>
                     <ul id="inclusion-list" class="space-y-3 mb-3"></ul>
                     <div class="flex gap-2">
-                        <input type="text" id="inc-input" placeholder="e.g. Study uses machine learning..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
+                        <input type="text" id="inc-input" placeholder="ex: O estudo utiliza machine learning..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
                         <button type="button" onclick="addCriterion('inclusion')" class="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-3 py-2 rounded-lg transition-colors">
                             <i class="fa-solid fa-plus"></i>
                         </button>
@@ -63,11 +63,11 @@
                 <!-- Exclusion -->
                 <div>
                     <h4 class="font-medium text-red-400 mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-minus-circle"></i> Exclusion Criteria
+                        <i class="fa-solid fa-minus-circle"></i> Critérios de Exclusão
                     </h4>
                     <ul id="exclusion-list" class="space-y-3 mb-3"></ul>
                     <div class="flex gap-2">
-                        <input type="text" id="exc-input" placeholder="e.g. Study is a literature review..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-500 transition-colors">
+                        <input type="text" id="exc-input" placeholder="ex: O estudo é uma revisão bibliográfica..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-500 transition-colors">
                         <button type="button" onclick="addCriterion('exclusion')" class="bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-2 rounded-lg transition-colors">
                             <i class="fa-solid fa-plus"></i>
                         </button>
@@ -83,16 +83,16 @@
                     <div class="bg-blue-500/20 w-10 h-10 rounded-lg flex items-center justify-center">
                         <i class="fa-solid fa-gears text-blue-400"></i>
                     </div>
-                    3. Execution Settings
+                    3. Configurações de Execução
                 </h3>
             </div>
             <div class="flex gap-4 items-center">
                 <div class="flex flex-col">
-                    <label for="concurrency" class="text-xs text-slate-400 mb-1">Concurrency (Max Async Jobs)</label>
+                    <label for="concurrency" class="text-xs text-slate-400 mb-1">Concorrência (Jobs Simultâneos)</label>
                     <input type="number" id="concurrency" min="1" max="50" value="2" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 transition-colors w-24 text-slate-200">
                 </div>
                 <div class="flex flex-col">
-                    <label for="provider" class="text-xs text-slate-400 mb-1">AI Provider</label>
+                    <label for="provider" class="text-xs text-slate-400 mb-1">Provedor de IA</label>
                     <select id="provider" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer text-slate-200">
                         <option value="ollama">Ollama (Local - Recommended)</option>
                         <option value="gemini">Google Gemini</option>
@@ -108,7 +108,7 @@
         
         <div class="mt-8 flex justify-center">
             <button type="submit" id="submit-btn" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-3 px-10 rounded-full shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-3 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
-                <span id="submit-text">Start AI Screening</span>
+                <span id="submit-text">Iniciar Triagem com IA</span>
                 <i class="fa-solid fa-rocket" id="submit-icon"></i>
             </button>
         </div>
@@ -119,22 +119,22 @@
 <div class="max-w-5xl mx-auto hidden" id="dashboard-container">
     <div class="flex justify-between items-end mb-8 border-b border-slate-700/50 pb-4">
         <div>
-            <h1 class="text-3xl font-bold mb-2">Screening <span class="text-gradient">Dashboard</span></h1>
-            <p class="text-slate-400 text-sm">Job ID: <span id="dash-job-id" class="font-mono text-xs text-slate-500"></span></p>
+            <h1 class="text-3xl font-bold mb-2">Painel de <span class="text-gradient">Triagem</span></h1>
+            <p class="text-slate-400 text-sm">ID do Job: <span id="dash-job-id" class="font-mono text-xs text-slate-500"></span></p>
         </div>
         <div id="dash-status-badge" class="px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-semibold flex items-center gap-2">
-            <i class="fa-solid fa-circle-notch fa-spin"></i> Running
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Executando
         </div>
     </div>
 
     <!-- Progress Card -->
     <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 mb-8 relative">
         <div class="flex justify-between items-end mb-2">
-            <span class="text-slate-300 font-medium">Processing Articles...</span>
+            <span class="text-slate-300 font-medium">Processando Artigos...</span>
             <div class="flex items-center gap-4">
                 <span class="text-slate-400 text-sm"><span id="dash-progress">0</span> / <span id="dash-total">0</span></span>
                 <button id="dash-stop-btn" class="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50 px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-2">
-                    <i class="fa-solid fa-hand"></i> Stop Process
+                    <i class="fa-solid fa-hand"></i> Parar Processo
                 </button>
             </div>
         </div>
@@ -156,16 +156,16 @@
                 <thead class="bg-slate-900/50 text-slate-400 border-b border-slate-700">
                     <tr>
                         <th class="px-6 py-4 font-semibold">ID</th>
-                        <th class="px-6 py-4 font-semibold w-1/2">Title</th>
-                        <th class="px-6 py-4 font-semibold text-center">Decision</th>
-                        <th class="px-6 py-4 font-semibold">Reason</th>
+                        <th class="px-6 py-4 font-semibold w-1/2">Título</th>
+                        <th class="px-6 py-4 font-semibold text-center">Decisão</th>
+                        <th class="px-6 py-4 font-semibold">Motivo</th>
                     </tr>
                 </thead>
                 <tbody id="results-tbody" class="divide-y divide-slate-700/50">
                     <tr>
                         <td colspan="4" class="px-6 py-8 text-center text-slate-500">
                             <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
-                            <p class="mt-2">Waiting for AI analysis...</p>
+                            <p class="mt-2">Aguardando análise da IA...</p>
                         </td>
                     </tr>
                 </tbody>
@@ -175,10 +175,10 @@
 
     <div class="flex justify-between items-center">
         <a href="/" class="text-slate-400 hover:text-white transition-colors flex items-center gap-2 font-medium">
-            <i class="fa-solid fa-arrow-left"></i> Start New Job
+            <i class="fa-solid fa-arrow-left"></i> Iniciar Novo Job
         </a>
         <button id="download-btn" class="hidden bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500 hover:text-white font-semibold py-2 px-6 rounded-lg transition-all items-center gap-2 shadow-lg">
-            <i class="fa-solid fa-download"></i> Download Results
+            <i class="fa-solid fa-download"></i> Baixar Resultados
         </button>
     </div>
 </div>
@@ -262,7 +262,7 @@
         const validExt = ['.csv', '.xls', '.xlsx'];
         const isMatch = validExt.some(ext => file.name.toLowerCase().endsWith(ext));
         if(!isMatch) {
-            alert('Invalid file format. Only .csv, .xls, .xlsx allowed.');
+            alert('Formato de arquivo inválido. Apenas .csv, .xls, .xlsx são permitidos.');
             return;
         }
         selectedFile = file;
@@ -315,16 +315,16 @@
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        if (!selectedFile) return alert('Please upload a spreadsheet corpus.');
-        if (inclusionCriteria.length === 0) return alert('Please add at least one inclusion criterion.');
-        if (exclusionCriteria.length === 0) return alert('Please add at least one exclusion criterion.');
+        if (!selectedFile) return alert('Por favor, faça o upload de uma planilha corpus.');
+        if (inclusionCriteria.length === 0) return alert('Por favor, adicione pelo menos um critério de inclusão.');
+        if (exclusionCriteria.length === 0) return alert('Por favor, adicione pelo menos um critério de exclusão.');
 
         const submitBtn = document.getElementById('submit-btn');
         const submitText = document.getElementById('submit-text');
         const submitIcon = document.getElementById('submit-icon');
         
         submitBtn.disabled = true;
-        submitText.textContent = "Uploading & Starting...";
+        submitText.textContent = "Enviando & Iniciando...";
         submitIcon.className = "fa-solid fa-spinner fa-spin";
 
         const provider = document.getElementById('provider').value;
@@ -343,22 +343,20 @@
             });
             const data = await res.json();
             
-            if (!res.ok) throw new Error(data.detail || 'Error uploading job');
+            if (!res.ok) throw new Error(data.detail || 'Erro ao iniciar o job');
             
             window.location.href = `/?job_id=${data.job_id}`;
 
         } catch (error) {
             alert(error.message);
             submitBtn.disabled = false;
-            submitText.textContent = "Start AI Screening";
+            submitText.textContent = "Iniciar Triagem com IA";
             submitIcon.className = "fa-solid fa-rocket";
         }
     });
 
     // Populate default lists for quick testing (only if on config view)
     if (!currentJobId) {
-        inclusionCriteria.push("The paper evaluates machine learning models for natural language processing.");
-        exclusionCriteria.push("The paper is a survey or literature review.");
         renderCriteria();
     }
 
@@ -375,7 +373,7 @@
     async function pollJobStatus() {
         try {
             const res = await fetch(`/api/jobs/${currentJobId}`);
-            if (!res.ok) throw new Error("Job not found");
+            if (!res.ok) throw new Error("Job não encontrado");
             const data = await res.json();
 
             // Update progress & tokens
@@ -419,10 +417,10 @@
                 
                 if (data.status === 'cancelled') {
                     badge.className = "px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-sm font-semibold flex items-center gap-2";
-                    badge.innerHTML = `<i class="fa-solid fa-hand"></i> Stopped`;
+                    badge.innerHTML = `<i class="fa-solid fa-hand"></i> Parado`;
                 } else {
                     badge.className = "px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-semibold flex items-center gap-2";
-                    badge.innerHTML = `<i class="fa-solid fa-check"></i> Completed`;
+                    badge.innerHTML = `<i class="fa-solid fa-check"></i> Concluído`;
                 }
                 
                 // Show download button
@@ -435,11 +433,11 @@
                 clearInterval(pollingInterval);
                 document.getElementById('dash-stop-btn').classList.add('hidden');
                 badge.className = "px-3 py-1 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 text-sm font-semibold flex items-center gap-2";
-                badge.innerHTML = `<i class="fa-solid fa-xmark"></i> Failed`;
+                badge.innerHTML = `<i class="fa-solid fa-xmark"></i> Falhou`;
                 
                 const errBox = document.getElementById('dash-error-msg');
                 errBox.classList.remove('hidden');
-                errBox.textContent = data.error || "Unknown error occurred.";
+                errBox.textContent = data.error || "Ocorreu um erro desconhecido.";
             }
 
         } catch (e) {
@@ -450,10 +448,10 @@
 
     // Stop Processing Event
     document.getElementById('dash-stop-btn').addEventListener('click', async () => {
-        if (!confirm('Are you sure you want to stop processing? The results gathered so far will be saved.')) return;
+        if (!confirm('Tem certeza de que deseja parar o processamento? Os resultados obtidos até agora serão salvos.')) return;
         
         try {
-            document.getElementById('dash-stop-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Stopping...`;
+            document.getElementById('dash-stop-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Parando...`;
             document.getElementById('dash-stop-btn').disabled = true;
             await fetch(`/api/jobs/${currentJobId}/stop`, { method: 'POST' });
             pollJobStatus(); // force immediate poll
