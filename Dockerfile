@@ -30,5 +30,5 @@ RUN mkdir -p uploads
 # Expose API/UI port
 EXPOSE 8000
 
-# Start the application using the entrypoint script
-CMD ["uv", "run", "screening-api"]
+# Start the application using the installed system entrypoint
+CMD ["screening-api"]
