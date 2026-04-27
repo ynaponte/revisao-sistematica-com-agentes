@@ -12,4 +12,4 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 @router.get("/")
 async def home(request: Request):
     """Render the main UI dashboard."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html")
