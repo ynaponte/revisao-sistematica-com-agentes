@@ -125,10 +125,15 @@
     </div>
 
     <!-- Progress Card -->
-    <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 mb-8">
+    <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 mb-8 relative">
         <div class="flex justify-between items-end mb-2">
             <span class="text-slate-300 font-medium">Processing Articles...</span>
-            <span class="text-slate-400 text-sm"><span id="dash-progress">0</span> / <span id="dash-total">0</span></span>
+            <div class="flex items-center gap-4">
+                <span class="text-slate-400 text-sm"><span id="dash-progress">0</span> / <span id="dash-total">0</span></span>
+                <button id="dash-stop-btn" class="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50 px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-hand"></i> Stop Process
+                </button>
+            </div>
         </div>
         <div class="w-full bg-slate-900 rounded-full h-3 mb-4 overflow-hidden border border-slate-700">
             <div id="dash-progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
@@ -334,6 +339,9 @@
     // Dashboard Polling Logic
     function startPolling() {
         if (pollingInterval) return;
+        
+        document.getElementById('dash-stop-btn').classList.remove('hidden');
+        
         pollJobStatus(); // initial call
         pollingInterval = setInterval(pollJobStatus, 10000);
     }
@@ -354,17 +362,21 @@
             const tbody = document.getElementById('results-tbody');
             if (data.results_summary && data.results_summary.length > 0) {
                 tbody.innerHTML = data.results_summary.map(r => {
-                    const isAcc = r.decision === 'ACCEPTED';
-                    const badge = isAcc 
-                        ? `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-md text-xs font-bold">ACCEPTED</span>`
-                        : `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-1 rounded-md text-xs font-bold">REJECTED</span>`;
+                    let badge = '';
+                    if (r.decision === 'ACCEPTED') {
+                        badge = `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-md text-xs font-bold">ACCEPTED</span>`;
+                    } else if (r.decision === 'CANCELLED') {
+                        badge = `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded-md text-xs font-bold">CANCELLED</span>`;
+                    } else {
+                        badge = `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-1 rounded-md text-xs font-bold">REJECTED</span>`;
+                    }
                     
                     return `
                         <tr class="hover:bg-slate-800/30 transition-colors">
                             <td class="px-6 py-4">${r.id}</td>
                             <td class="px-6 py-4 font-medium text-slate-200">${r.title.substring(0, 100)}${r.title.length > 100 ? '...' : ''}</td>
                             <td class="px-6 py-4 text-center">${badge}</td>
-                            <td class="px-6 py-4 text-xs text-slate-400">${isAcc ? '-' : r.reasons}</td>
+                            <td class="px-6 py-4 text-xs text-slate-400">${r.decision === 'ACCEPTED' ? '-' : r.reasons}</td>
                         </tr>
                     `;
                 }).join('');
@@ -372,10 +384,17 @@
 
             // Update Status Badge
             const badge = document.getElementById('dash-status-badge');
-            if (data.status === 'completed') {
+            if (data.status === 'completed' || data.status === 'cancelled') {
                 clearInterval(pollingInterval);
-                badge.className = "px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-semibold flex items-center gap-2";
-                badge.innerHTML = `<i class="fa-solid fa-check"></i> Completed`;
+                document.getElementById('dash-stop-btn').classList.add('hidden');
+                
+                if (data.status === 'cancelled') {
+                    badge.className = "px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-sm font-semibold flex items-center gap-2";
+                    badge.innerHTML = `<i class="fa-solid fa-hand"></i> Stopped`;
+                } else {
+                    badge.className = "px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-semibold flex items-center gap-2";
+                    badge.innerHTML = `<i class="fa-solid fa-check"></i> Completed`;
+                }
                 
                 // Show download button
                 const btn = document.getElementById('download-btn');
@@ -385,6 +404,7 @@
 
             } else if (data.status === 'failed') {
                 clearInterval(pollingInterval);
+                document.getElementById('dash-stop-btn').classList.add('hidden');
                 badge.className = "px-3 py-1 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 text-sm font-semibold flex items-center gap-2";
                 badge.innerHTML = `<i class="fa-solid fa-xmark"></i> Failed`;
                 
@@ -398,5 +418,19 @@
             clearInterval(pollingInterval);
         }
     }
+
+    // Stop Processing Event
+    document.getElementById('dash-stop-btn').addEventListener('click', async () => {
+        if (!confirm('Are you sure you want to stop processing? The results gathered so far will be saved.')) return;
+        
+        try {
+            document.getElementById('dash-stop-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Stopping...`;
+            document.getElementById('dash-stop-btn').disabled = true;
+            await fetch(`/api/jobs/${currentJobId}/stop`, { method: 'POST' });
+            pollJobStatus(); // force immediate poll
+        } catch (e) {
+            console.error('Failed to stop job', e);
+        }
+    });
 </script>
 {% endblock %}

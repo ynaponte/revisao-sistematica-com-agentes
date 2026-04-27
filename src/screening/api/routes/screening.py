@@ -20,7 +20,7 @@ from ...spreadsheet import load_articles, write_results
 router = APIRouter(prefix="/api")
 
 # In-memory job tracker for the MVP
-# Structure: { job_id: {"status": "running"|"completed"|"failed", "progress": 0, "total": 0, "output_path": str, "error": str} }
+# Structure: { job_id: {"status": "running"|"completed"|"failed", "progress": 0, "total": 0, "output_path": str, "error": str, "cancelled": bool, "results_summary": list} }
 jobs: Dict[str, Dict[str, Any]] = {}
 
 logging.basicConfig(level=logging.INFO)
@@ -54,7 +54,38 @@ async def process_articles_task(
         semaphore = asyncio.Semaphore(concurrency)
         
         async def process_single(article: Article):
+            if jobs[job_id].get("cancelled"):
+                res = {
+                    "decision": "CANCELLED",
+                    "rejection_reasons": ["Stopped by user"],
+                    "justification": "Process stopped before this article."
+                }
+                jobs[job_id]["progress"] += 1
+                jobs[job_id]["results_summary"].append({
+                    "id": article.id,
+                    "title": article.title,
+                    "decision": res["decision"],
+                    "reasons": res["rejection_reasons"][0]
+                })
+                return res
+            
             async with semaphore:
+                # Check again in case it was cancelled while waiting for semaphore
+                if jobs[job_id].get("cancelled"):
+                    res = {
+                        "decision": "CANCELLED",
+                        "rejection_reasons": ["Stopped by user"],
+                        "justification": "Process stopped."
+                    }
+                    jobs[job_id]["progress"] += 1
+                    jobs[job_id]["results_summary"].append({
+                        "id": article.id,
+                        "title": article.title,
+                        "decision": res["decision"],
+                        "reasons": res["rejection_reasons"][0]
+                    })
+                    return res
+
                 config = RunnableConfig(configurable={"thread_id": str(article.id)})
                 human_text = build_human_prompt(article, inclusion, exclusion)
                 
@@ -80,6 +111,14 @@ async def process_articles_task(
                 
                 jobs[job_id]["progress"] += 1
                 
+                # Update live summary
+                jobs[job_id]["results_summary"].append({
+                    "id": article.id,
+                    "title": article.title,
+                    "decision": result.get("decision", "ERROR"),
+                    "reasons": ", ".join(result.get("rejection_reasons", []))
+                })
+                
                 # Atraso de segurança para não sobrecarregar LLMs locais (ex: Ollama)
                 await asyncio.sleep(10)
                 
@@ -89,10 +128,8 @@ async def process_articles_task(
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         cleaned_results = []
-        results_summary = []
         for article, r in zip(articles, results):
             if isinstance(r, BaseException):
-                logger.error(f"Erro de sistema no gather para artigo {article.id}: {str(r)}", exc_info=True)
                 res = {
                         "decision": "REJECTED",
                         "rejection_reasons": [f"SYSTEM ERROR: {str(r)}"],
@@ -102,13 +139,6 @@ async def process_articles_task(
                 res = r
             
             cleaned_results.append(res)
-            results_summary.append({
-                "id": article.id,
-                "title": article.title,
-                "decision": res.get("decision", "ERROR"),
-                "reasons": ", ".join(res.get("rejection_reasons", []))
-            })
-
 
         output_path = UPLOAD_DIR / f"results_{job_id}.xlsx"
         write_results(
@@ -120,9 +150,8 @@ async def process_articles_task(
             metadata={"Provider": provider, "Total Analyzed": str(len(articles))}
         )
         
-        jobs[job_id]["status"] = "completed"
+        jobs[job_id]["status"] = "completed" if not jobs[job_id].get("cancelled") else "cancelled"
         jobs[job_id]["output_path"] = str(output_path)
-        jobs[job_id]["results_summary"] = results_summary
 
     except Exception as e:
         jobs[job_id]["status"] = "failed"
@@ -158,6 +187,7 @@ async def start_screening(
         "total": 0,
         "output_path": None,
         "error": None,
+        "cancelled": False,
         "results_summary": []
     }
 
@@ -190,8 +220,8 @@ async def download_results(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
         
     job = jobs[job_id]
-    if job["status"] != "completed" or not job["output_path"]:
-        raise HTTPException(status_code=400, detail="Job is not completed yet")
+    if job["status"] not in ("completed", "cancelled") or not job["output_path"]:
+        raise HTTPException(status_code=400, detail="Job is not finished yet")
         
     file_path = Path(job["output_path"])
     if not file_path.exists():
@@ -202,3 +232,15 @@ async def download_results(job_id: str):
         filename=f"screening_results.xlsx",
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+@router.post("/jobs/{job_id}/stop")
+async def stop_job(job_id: str):
+    """Signals a running job to stop and save progress."""
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if jobs[job_id]["status"] == "running":
+        jobs[job_id]["cancelled"] = True
+        return {"message": "Job stopping. Saving progress..."}
+    
+    return {"message": f"Job is already {jobs[job_id]['status']}"}
