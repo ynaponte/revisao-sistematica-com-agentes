@@ -64,7 +64,12 @@ async def process_articles_task(
                         config=config,
                         context=context,
                     )
-                    result = output
+                    # Extrair APENAS os campos finais para liberar memoria (GC) das mensagens
+                    result = {
+                        "decision": output.get("decision", "ERROR"),
+                        "rejection_reasons": output.get("rejection_reasons", []),
+                        "justification": output.get("justification", "")
+                    }
                 except Exception as e:
                     logger.error(f"Erro ao processar artigo {article.id}: {str(e)}", exc_info=True)
                     result = {
