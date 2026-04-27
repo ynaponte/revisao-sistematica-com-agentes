@@ -1,89 +1,76 @@
 # Agente de Screening para Revisão Sistemática
 
-Este projeto implementa um agente inteligente baseado em **LangGraph** (v1.0.8) e **LangChain** (v1.2.7) projetado para automatizar a triagem (screening) de artigos em revisões sistemáticas de literatura. O sistema utiliza modelos de linguagem (LLMs) para avaliar títulos e resumos contra critérios de inclusão e exclusão definidos pelo pesquisador.
+Este projeto implementa um agente inteligente projetado para automatizar a triagem (screening) de artigos em revisões sistemáticas de literatura. O sistema utiliza modelos de linguagem (LLMs) como Gemini e Ollama para avaliar títulos e resumos contra critérios de inclusão e exclusão definidos pelo pesquisador.
+
+Recentemente refatorado para uma **Aplicação Web (SPA) Dockerizada**, permitindo fácil uso através de um painel interativo.
 
 ## 🚀 Funcionalidades
 
-- **Triagem Automatizada**: Avaliação rigorosa de artigos baseada em critérios customizáveis.
-- **Execução Paralela Assíncrona**: Processamento concorrente via `asyncio` com controle de concorrência por `Semaphore`.
-- **Arquitetura de Grafo de Estado**: Implementado com LangGraph para separação clara entre lógica de decisão e parsing de resultados.
-- **Suporte Multi-Provedor**: Compatível com Google Gemini, Ollama (local) e vLLM.
-- **Checkpointer em Memória**: Mantém o histórico de execução por artigo utilizando `thread_id` por corrotina.
-- **Processamento em Lote**: Carrega artigos de planilhas `.xlsx`/`.xls` e exporta resultados detalhados com justificativas.
+- **Dashboard Web Interativo**: Interface moderna (Jinja2 + TailwindCSS) em uma Single Page Application para configuração de critérios, upload de planilhas e monitoramento de triagem em tempo real.
+- **Triagem Automatizada**: Avaliação rigorosa de artigos baseada em critérios customizáveis usando agentes baseados em LangGraph.
+- **Execução Paralela Assíncrona**: Processamento concorrente via background tasks do FastAPI com controle configurável de concorrência.
+- **Botão E-STOP**: Parada de emergência durante a execução com salvamento automático do progresso parcial alcançado.
+- **Suporte Multi-Provedor**: Compatível com Google Gemini, Ollama (local) e vLLM, com detecção automática de ambiente Docker para modelos locais.
+- **Ambiente Conteinerizado**: Deploy fácil através de `docker-compose`, mantendo toda a aplicação leve e independente.
 
 ## 🛠️ Stack Tecnológica
 
-- **Core**: Python 3.10+
-- **Orquestração**: [LangGraph v1.0.8](https://github.com/langchain-ai/langgraph)
-- **Modelos**: LangChain Core & Google/Ollama integrations
-- **Dados**: Pandas, OpenPyXL, XLRD
-- **Ambiente**: Python-dotenv
+- **Backend**: FastAPI (Python 3.12)
+- **Orquestração AI**: [LangGraph v1.0.8](https://github.com/langchain-ai/langgraph) / LangChain Core
+- **Frontend**: HTML5, Vanilla JS, TailwindCSS (via CDN)
+- **Infraestrutura**: Docker & Docker Compose
+- **Gerenciador de Dependências**: `uv`
 
-## 📋 Arquitetura do Sistema
+## ⚙️ Configuração e Execução
 
-O fluxo de screening é estruturado como um grafo de estado compilado (`CompiledStateGraph`), executado de forma assíncrona:
+### 1. Pré-requisitos
+- [Docker](https://docs.docker.com/get-docker/) instalado.
+- Chave de API do Google Gemini (se for utilizar o Gemini).
+- Ollama instalado e rodando na sua máquina Host (se for utilizar o Ollama local).
 
-1. **Agent Node** (`async`): Recebe a mensagem humana (Título + Resumo + Critérios), instancia o LLM via `get_llm(provider)` e faz `await agent.ainvoke()` com o prompt de sistema.
-2. **Parser Node**: Extrai via Regex a decisão (`ACCEPTED`/`REJECTED`), discriminantes e justificativa do texto cru do modelo.
-3. **State Management**: `ScreeningState` (mensagens) → `OutputState` (decisão estruturada) como schema de saída do grafo.
-4. **Concorrência**: `main.py` dispara todas as corrotinas com `asyncio.gather`, limitadas por `asyncio.Semaphore(--concurrency)`.
-
-## ⚙️ Configuração
-
-1. Clone o repositório:
-   ```bash
-   git clone git@github.com:ynaponte/revisao-sistematica-com-agentes.git
-   cd revisao-sistematica-com-agentes
-   ```
-
-2. Instale as dependências e o ambiente virtual:
-   ```bash
-   # Sincroniza o ambiente conforme o pyproject.toml
-   uv sync
-   
-   # Ativar o ambiente para execução manual
-   # Linux/macOS: source .venv/bin/activate
-   # Windows: .\.venv\Scripts\activate
-   ```
-
-3. Configure as variáveis de ambiente:
-   Crie um arquivo `.env` baseado no `.env.example`:
-   ```env
-   GEMINI_API_KEY=sua_chave_aqui
-   # Se usar Ollama
-   OLLAMA_BASE_URL=http://localhost:11434
-   ```
-
-## 🖥️ Como Usar
-
-A execução é feita via CLI através do módulo `screening`:
+### 2. Configuração do Ambiente
+Clone o repositório e crie o seu arquivo `.env`:
 
 ```bash
-python -m src.screening.main \
-    --input "caminho/para/seus_artigos.xlsx" \
-    --inclusion "Critério 1" "Critério 2" \
-    --exclusion "Critério de Exclusão 1" \
-    --provider gemini \
-    --rows "1-50" \
-    --concurrency 5
+git clone git@github.com:ynaponte/revisao-sistematica-com-agentes.git
+cd revisao-sistematica-com-agentes
+cp .env.example .env
 ```
 
-### Argumentos Principais:
-- `--input (-i)`: Caminho da planilha de entrada.
-- `--inclusion`: Lista de critérios de inclusão.
-- `--exclusion`: Lista de critérios de exclusão.
-- `--provider (-p)`: Provedor do modelo (`gemini`, `ollama`, `vllm`).
-- `--rows (-r)`: Range de linhas para processar (ex: "1-100").
-- `--concurrency (-c)`: Número de artigos processados simultaneamente (default: `1`).
-- `--delay`: Delay em segundos após cada chamada dentro do semaphore (default: `4.0`).
+Edite o `.env` com suas chaves de API. Se você for usar modelos locais (Ollama), a aplicação dentro do Docker já está configurada automaticamente para acessar a sua máquina Host através de `host.docker.internal`.
+
+### 3. Subindo a Aplicação
+
+Inicie o container de forma otimizada com o Docker Compose:
+
+```bash
+docker-compose up -d --build
+```
+
+Acesse o sistema pelo seu navegador no endereço: **http://localhost:8000**
+
+### 4. Requisitos da Planilha (Upload)
+Para que a aplicação consiga extrair os dados adequadamente, a sua planilha (`.xlsx`, `.xls` ou `.csv`) deve conter uma linha de cabeçalho com, obrigatoriamente, as seguintes colunas (a ordem não importa):
+- **Título**: O cabeçalho deve conter a palavra `title`, `título` ou `titulo`.
+- **Resumo**: O cabeçalho deve conter a palavra `abstract` ou `resumo`.
+
+*Opcional*: Se houver uma coluna de identificação (cabeçalho com `id`, `identificador`, ou `key`), o sistema usará esse ID. Caso contrário, o número da linha será usado como ID.
+
+## 🖥️ Como Usar a Plataforma
+
+1. Na tela inicial, faça o upload da sua planilha (`.xlsx` ou `.xls`).
+2. Adicione os Critérios de Inclusão e Exclusão.
+3. Escolha a LLM (Gemini ou Ollama) e o nível de Concorrência (quantidade de requisições simultâneas).
+4. Clique em **Start Screening**. O painel alternará dinamicamente para o *Dashboard* de processamento.
+5. Acompanhe a tabela sendo preenchida em tempo real com as decisões (ACCEPTED / REJECTED) do agente.
+6. Ao finalizar (ou caso deseje interromper com segurança via E-STOP), baixe a nova planilha processada clicando em *Download Results*.
 
 ## 📊 Saída de Dados
 
-O agente gera uma nova planilha contendo:
-- Decisão Final (`ACCEPTED` ou `REJECTED`).
-- IDs dos critérios que causaram a exclusão.
-- Justificativa textual baseada estritamente no resumo/título.
-- Metadados da execução (Modelo utilizado, data, etc).
+A planilha Excel gerada para download contém:
+- **Decisão Final** (`ACCEPTED` ou `REJECTED`, ou `CANCELLED`).
+- **Motivos** (IDs e Resumos dos critérios que causaram exclusão).
+- **Justificativa** textual detalhada do LLM baseada estritamente no resumo/título em contraste com seus critérios.
 
 ## 📄 Licença
 
