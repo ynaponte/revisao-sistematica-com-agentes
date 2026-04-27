@@ -9,8 +9,6 @@ services:
     volumes:
       # Persiste os uploads e resultados localmente
       - ./uploads:/app/uploads
-      # Injeta as chaves de API caso o usuário crie um .env local
-      - ./.env:/app/.env
     environment:
       # Fallback caso variáveis sejam passadas diretamente do host
       - GEMINI_API_KEY=${GEMINI_API_KEY}
