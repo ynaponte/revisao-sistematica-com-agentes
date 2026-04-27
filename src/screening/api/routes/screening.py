@@ -20,7 +20,7 @@ from ...spreadsheet import load_articles, write_results
 router = APIRouter(prefix="/api")
 
 # In-memory job tracker for the MVP
-# Structure: { job_id: {"status": "running"|"completed"|"failed", "progress": 0, "total": 0, "output_path": str, "error": str, "cancelled": bool, "results_summary": list} }
+# Structure: { job_id: {"status": "running"|"completed"|"failed", "progress": 0, "total": 0, "output_path": str, "error": str, "cancelled": bool, "results_summary": list, "total_tokens": int} }
 jobs: Dict[str, Dict[str, Any]] = {}
 
 logging.basicConfig(level=logging.INFO)
@@ -95,11 +95,19 @@ async def process_articles_task(
                         config=config,
                         context=context,
                     )
+                    
+                    tokens = 0
+                    if "messages" in output and output["messages"]:
+                        last_msg = output["messages"][-1]
+                        if hasattr(last_msg, "usage_metadata") and last_msg.usage_metadata:
+                            tokens = last_msg.usage_metadata.get("total_tokens", 0)
+
                     # Extrair APENAS os campos finais para liberar memoria (GC) das mensagens
                     result = {
                         "decision": output.get("decision", "ERROR"),
                         "rejection_reasons": output.get("rejection_reasons", []),
-                        "justification": output.get("justification", "")
+                        "justification": output.get("justification", ""),
+                        "tokens": tokens
                     }
                 except Exception as e:
                     logger.error(f"Erro ao processar artigo {article.id}: {str(e)}", exc_info=True)
@@ -107,9 +115,11 @@ async def process_articles_task(
                         "decision": "REJECTED",
                         "rejection_reasons": [f"API ERROR: {str(e)}"],
                         "justification": f"Processing error: {e}",
+                        "tokens": 0
                     }
                 
                 jobs[job_id]["progress"] += 1
+                jobs[job_id]["total_tokens"] += result.get("tokens", 0)
                 
                 # Update live summary
                 jobs[job_id]["results_summary"].append({
@@ -188,7 +198,8 @@ async def start_screening(
         "output_path": None,
         "error": None,
         "cancelled": False,
-        "results_summary": []
+        "results_summary": [],
+        "total_tokens": 0
     }
 
     background_tasks.add_task(
@@ -244,3 +255,17 @@ async def stop_job(job_id: str):
         return {"message": "Job stopping. Saving progress..."}
     
     return {"message": f"Job is already {jobs[job_id]['status']}"}
+
+@router.get("/config")
+async def get_config():
+    """Return configured models from environment."""
+    return {
+        "models": {
+            "gemini": os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+            "ollama": os.getenv("OLLAMA_MODEL", "llama3.1"),
+            "openai": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            "anthropic": os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"),
+            "deepseek": os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+            "vllm": os.getenv("VLLM_MODEL", "meta-llama/Llama-3-8b-instruct")
+        }
+    }

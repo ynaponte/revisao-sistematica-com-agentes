@@ -32,9 +32,15 @@ def get_llm(provider: str | None = None) -> BaseChatModel:
         return _create_ollama()
     elif provider == "vllm":
         return _create_vllm()
+    elif provider == "openai":
+        return _create_openai()
+    elif provider == "anthropic":
+        return _create_anthropic()
+    elif provider == "deepseek":
+        return _create_deepseek()
     else:
         raise ValueError(
-            f"Unknown LLM provider: '{provider}'. Use 'gemini', 'ollama', or 'vllm'."
+            f"Unknown LLM provider: '{provider}'. Use 'gemini', 'ollama', 'vllm', 'openai', 'anthropic', or 'deepseek'."
         )
 
 
@@ -88,5 +94,51 @@ def _create_vllm() -> BaseChatModel:
         model=model,
         base_url=base_url,
         api_key=api_key,
+        temperature=0.1,
+    )
+
+
+def _create_openai() -> BaseChatModel:
+    """Create an OpenAI chat model."""
+    from langchain_openai import ChatOpenAI
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise EnvironmentError("OPENAI_API_KEY environment variable is required for OpenAI provider.")
+
+    return ChatOpenAI(
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        api_key=api_key,
+        temperature=0.1,
+    )
+
+
+def _create_anthropic() -> BaseChatModel:
+    """Create an Anthropic Claude chat model."""
+    from langchain_anthropic import ChatAnthropic
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise EnvironmentError("ANTHROPIC_API_KEY environment variable is required for Anthropic provider.")
+
+    return ChatAnthropic(
+        model_name=os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"),
+        api_key=api_key,
+        temperature=0.1,
+    )
+
+
+def _create_deepseek() -> BaseChatModel:
+    """Create a DeepSeek chat model."""
+    from langchain_deepseek import ChatDeepSeek
+
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+    if not api_key:
+        raise EnvironmentError("DEEPSEEK_API_KEY environment variable is required for DeepSeek provider.")
+
+    return ChatDeepSeek(
+        model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+        api_key=api_key,
+        api_base=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
         temperature=0.1,
     )

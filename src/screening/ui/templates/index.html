@@ -94,11 +94,14 @@
                 <div class="flex flex-col">
                     <label for="provider" class="text-xs text-slate-400 mb-1">AI Provider</label>
                     <select id="provider" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer text-slate-200">
-                        <option value="gemini">Google Gemini (Recommended)</option>
-                        <option value="openai">OpenAI GPT</option>
+                        <option value="ollama">Ollama (Local - Recommended)</option>
+                        <option value="gemini">Google Gemini</option>
+                        <option value="openai">OpenAI ChatGPT</option>
+                        <option value="anthropic">Anthropic Claude</option>
+                        <option value="deepseek">DeepSeek</option>
                         <option value="vllm">vLLM (Local)</option>
-                        <option value="ollama">Ollama (Local)</option>
                     </select>
+                    <p id="active-model-text" class="text-xs text-slate-500 mt-2 font-mono"><i class="fa-solid fa-microchip"></i> Model: <span id="model-name">Loading...</span></p>
                 </div>
             </div>
         </div>
@@ -139,6 +142,11 @@
             <div id="dash-progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
         </div>
         <div id="dash-error-msg" class="hidden text-red-400 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20"></div>
+        <div class="mt-4 pt-4 border-t border-slate-700/50 flex gap-6 text-sm">
+            <div class="text-slate-400">
+                <i class="fa-solid fa-coins text-amber-500"></i> Tokens Utilizados: <span id="dash-tokens" class="text-slate-200 font-mono font-medium">0</span>
+            </div>
+        </div>
     </div>
 
     <!-- Results Data Table -->
@@ -183,6 +191,7 @@
     let exclusionCriteria = [];
     let currentJobId = null;
     let pollingInterval = null;
+    let serverConfig = null;
 
     // Elements
     const configContainer = document.getElementById('config-container');
@@ -202,6 +211,23 @@
         dashboardContainer.classList.remove('hidden');
         document.getElementById('dash-job-id').textContent = currentJobId;
         startPolling();
+    } else {
+        // Fetch config to populate active model text
+        fetch('/api/config')
+            .then(res => res.json())
+            .then(data => {
+                serverConfig = data;
+                updateModelText();
+            })
+            .catch(err => console.error("Could not load config", err));
+    }
+    
+    document.getElementById('provider').addEventListener('change', updateModelText);
+    
+    function updateModelText() {
+        if (!serverConfig) return;
+        const prov = document.getElementById('provider').value;
+        document.getElementById('model-name').textContent = serverConfig.models[prov] || "Unknown";
     }
     
     // File Drag & Drop
@@ -352,9 +378,12 @@
             if (!res.ok) throw new Error("Job not found");
             const data = await res.json();
 
-            // Update progress
+            // Update progress & tokens
             document.getElementById('dash-progress').textContent = data.progress;
             document.getElementById('dash-total').textContent = data.total;
+            if (data.total_tokens) {
+                document.getElementById('dash-tokens').textContent = data.total_tokens.toLocaleString();
+            }
             const pct = data.total > 0 ? (data.progress / data.total) * 100 : 0;
             document.getElementById('dash-progress-bar').style.width = `${pct}%`;
 
