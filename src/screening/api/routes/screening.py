@@ -74,15 +74,25 @@ async def process_articles_task(
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         cleaned_results = []
-        for r in results:
+        results_summary = []
+        for article, r in zip(articles, results):
             if isinstance(r, BaseException):
-                cleaned_results.append({
+                res = {
                         "decision": "REJECTED",
                         "rejection_reasons": ["ERROR"],
                         "justification": f"System error: {r}",
-                })
+                }
             else:
-                cleaned_results.append(r)
+                res = r
+            
+            cleaned_results.append(res)
+            results_summary.append({
+                "id": article.id,
+                "title": article.title,
+                "decision": res.get("decision", "ERROR"),
+                "reasons": ", ".join(res.get("rejection_reasons", []))
+            })
+
 
         output_path = UPLOAD_DIR / f"results_{job_id}.xlsx"
         write_results(
@@ -96,6 +106,7 @@ async def process_articles_task(
         
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["output_path"] = str(output_path)
+        jobs[job_id]["results_summary"] = results_summary
 
     except Exception as e:
         jobs[job_id]["status"] = "failed"
@@ -129,7 +140,8 @@ async def start_screening(
         "progress": 0,
         "total": 0,
         "output_path": None,
-        "error": None
+        "error": None,
+        "results_summary": []
     }
 
     background_tasks.add_task(

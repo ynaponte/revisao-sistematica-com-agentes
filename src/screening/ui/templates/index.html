@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Configuration View -->
 <div class="max-w-4xl mx-auto" id="config-container">
     <div class="mb-10 text-center">
         <h1 class="text-4xl md:text-5xl font-bold mb-4">Start a <span class="text-gradient">Systematic Review</span></h1>
@@ -102,20 +103,92 @@
     </form>
 </div>
 
+<!-- Dashboard View (Hidden by default) -->
+<div class="max-w-5xl mx-auto hidden" id="dashboard-container">
+    <div class="flex justify-between items-end mb-8 border-b border-slate-700/50 pb-4">
+        <div>
+            <h1 class="text-3xl font-bold mb-2">Screening <span class="text-gradient">Dashboard</span></h1>
+            <p class="text-slate-400 text-sm">Job ID: <span id="dash-job-id" class="font-mono text-xs text-slate-500"></span></p>
+        </div>
+        <div id="dash-status-badge" class="px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-semibold flex items-center gap-2">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Running
+        </div>
+    </div>
+
+    <!-- Progress Card -->
+    <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 mb-8">
+        <div class="flex justify-between items-end mb-2">
+            <span class="text-slate-300 font-medium">Processing Articles...</span>
+            <span class="text-slate-400 text-sm"><span id="dash-progress">0</span> / <span id="dash-total">0</span></span>
+        </div>
+        <div class="w-full bg-slate-900 rounded-full h-3 mb-4 overflow-hidden border border-slate-700">
+            <div id="dash-progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+        </div>
+        <div id="dash-error-msg" class="hidden text-red-400 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20"></div>
+    </div>
+
+    <!-- Results Data Table -->
+    <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl overflow-hidden mb-8">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900/50 text-slate-400 border-b border-slate-700">
+                    <tr>
+                        <th class="px-6 py-4 font-semibold">ID</th>
+                        <th class="px-6 py-4 font-semibold w-1/2">Title</th>
+                        <th class="px-6 py-4 font-semibold text-center">Decision</th>
+                        <th class="px-6 py-4 font-semibold">Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="results-tbody" class="divide-y divide-slate-700/50">
+                    <tr>
+                        <td colspan="4" class="px-6 py-8 text-center text-slate-500">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p class="mt-2">Waiting for AI analysis...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="flex justify-between items-center">
+        <a href="/" class="text-slate-400 hover:text-white transition-colors flex items-center gap-2 font-medium">
+            <i class="fa-solid fa-arrow-left"></i> Start New Job
+        </a>
+        <button id="download-btn" class="hidden bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500 hover:text-white font-semibold py-2 px-6 rounded-lg transition-all items-center gap-2 shadow-lg">
+            <i class="fa-solid fa-download"></i> Download Results
+        </button>
+    </div>
+</div>
+
 <!-- Scripts for Interaction -->
 <script>
     // State
     let selectedFile = null;
     let inclusionCriteria = [];
     let exclusionCriteria = [];
+    let currentJobId = null;
+    let pollingInterval = null;
 
     // Elements
+    const configContainer = document.getElementById('config-container');
+    const dashboardContainer = document.getElementById('dashboard-container');
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('file-input');
     const fileInfo = document.getElementById('file-info');
     const fileName = document.getElementById('file-name');
     const removeFileBtn = document.getElementById('remove-file');
     const form = document.getElementById('job-form');
+    
+    // Routing Logic based on URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('job_id')) {
+        currentJobId = urlParams.get('job_id');
+        configContainer.classList.add('hidden');
+        dashboardContainer.classList.remove('hidden');
+        document.getElementById('dash-job-id').textContent = currentJobId;
+        startPolling();
+    }
     
     // File Drag & Drop
     dropzone.addEventListener('click', () => fileInput.click());
@@ -189,7 +262,6 @@
         }
     }
     
-    // allow enter key
     document.getElementById('inc-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') { e.preventDefault(); addCriterion('inclusion'); }});
     document.getElementById('exc-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') { e.preventDefault(); addCriterion('exclusion'); }});
 
@@ -231,7 +303,6 @@
             
             if (!res.ok) throw new Error(data.detail || 'Error uploading job');
             
-            // Go to dashboard/progress view (mock navigation for now, will implement in 2.3)
             window.location.href = `/?job_id=${data.job_id}`;
 
         } catch (error) {
@@ -242,9 +313,79 @@
         }
     });
 
-    // Populate default lists for quick testing
-    inclusionCriteria.push("The paper evaluates machine learning models for natural language processing.");
-    exclusionCriteria.push("The paper is a survey or literature review.");
-    renderCriteria();
+    // Populate default lists for quick testing (only if on config view)
+    if (!currentJobId) {
+        inclusionCriteria.push("The paper evaluates machine learning models for natural language processing.");
+        exclusionCriteria.push("The paper is a survey or literature review.");
+        renderCriteria();
+    }
+
+    // Dashboard Polling Logic
+    function startPolling() {
+        if (pollingInterval) return;
+        pollJobStatus(); // initial call
+        pollingInterval = setInterval(pollJobStatus, 2000);
+    }
+
+    async function pollJobStatus() {
+        try {
+            const res = await fetch(`/api/jobs/${currentJobId}`);
+            if (!res.ok) throw new Error("Job not found");
+            const data = await res.json();
+
+            // Update progress
+            document.getElementById('dash-progress').textContent = data.progress;
+            document.getElementById('dash-total').textContent = data.total;
+            const pct = data.total > 0 ? (data.progress / data.total) * 100 : 0;
+            document.getElementById('dash-progress-bar').style.width = `${pct}%`;
+
+            // Render Table Results
+            const tbody = document.getElementById('results-tbody');
+            if (data.results_summary && data.results_summary.length > 0) {
+                tbody.innerHTML = data.results_summary.map(r => {
+                    const isAcc = r.decision === 'ACCEPTED';
+                    const badge = isAcc 
+                        ? `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-md text-xs font-bold">ACCEPTED</span>`
+                        : `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-1 rounded-md text-xs font-bold">REJECTED</span>`;
+                    
+                    return `
+                        <tr class="hover:bg-slate-800/30 transition-colors">
+                            <td class="px-6 py-4">${r.id}</td>
+                            <td class="px-6 py-4 font-medium text-slate-200">${r.title.substring(0, 100)}${r.title.length > 100 ? '...' : ''}</td>
+                            <td class="px-6 py-4 text-center">${badge}</td>
+                            <td class="px-6 py-4 text-xs text-slate-400">${isAcc ? '-' : r.reasons}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // Update Status Badge
+            const badge = document.getElementById('dash-status-badge');
+            if (data.status === 'completed') {
+                clearInterval(pollingInterval);
+                badge.className = "px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-semibold flex items-center gap-2";
+                badge.innerHTML = `<i class="fa-solid fa-check"></i> Completed`;
+                
+                // Show download button
+                const btn = document.getElementById('download-btn');
+                btn.classList.remove('hidden');
+                btn.classList.add('flex');
+                btn.onclick = () => { window.location.href = `/api/jobs/${currentJobId}/download`; };
+
+            } else if (data.status === 'failed') {
+                clearInterval(pollingInterval);
+                badge.className = "px-3 py-1 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 text-sm font-semibold flex items-center gap-2";
+                badge.innerHTML = `<i class="fa-solid fa-xmark"></i> Failed`;
+                
+                const errBox = document.getElementById('dash-error-msg');
+                errBox.classList.remove('hidden');
+                errBox.textContent = data.error || "Unknown error occurred.";
+            }
+
+        } catch (e) {
+            console.error("Polling error:", e);
+            clearInterval(pollingInterval);
+        }
+    }
 </script>
 {% endblock %}
