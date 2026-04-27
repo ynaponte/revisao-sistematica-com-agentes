@@ -14,15 +14,15 @@ Follow these steps in strict order:
  
 *Step 2 — Targeted Read:* Read the title and abstract looking specifically for the evidence defined in Step 1. For each criterion, mark it as met, violated, or ambiguous based only on what the text explicitly states.
  
-*Step 3 — Decision:* If there's even one clearly unmet inclusion criterion or clearly triggered exclusion criterion results in the article being REJECTED. All other cases, including any criterion marked ambiguous, result in ACCEPTED.
+*Step 3 — Decision:* If there's even one clearly unmet inclusion criterion or clearly triggered exclusion criterion results in the article being REJECTED. An article is ACCEPTED if it meets EVERY inclusion criterion (including any criterion marked ambiguous) and *DOES NOT TRIGGER ANY* exclusion criterion.
  
-*Step 4 — Synthesis:* Write the output per OUTPUT FORMAT. If REJECTED, identify the discriminating criteria and state in 1–3 sentences what in the text caused each failure. If ACCEPTED, omit DISCRIMINANTS and JUSTIFICATION.
+*Step 4 — Synthesis:* Write your output clearly stating your decision as either ACCEPTED or REJECTED. If REJECTED, identify the discriminating criteria. Write a JUSTIFICATION for why the article was accepted or rejected in 1 to 3 sentences.
 
 ## Output Format
 ```
 DECISION: [ACCEPTED or REJECTED]
-DISCRIMINANTS: [Comma-separated criterion IDs, e.g. I2, E1 — omit if ACCEPTED]
-JUSTIFICATION: [1–3 sentences grounded in the title and abstract — omit if ACCEPTED]
+DISCRIMINANTS: [Comma-separated criterion IDs, e.g. I2, E1 — None if ACCEPTED ]
+JUSTIFICATION: [1–3 sentences grounded in the title and abstract]
 ```
 
 ## Constraints
@@ -44,11 +44,15 @@ JUSTIFICATION: O artigo descreve um tabuleiro físico em papel, o que não atend
 Input: Title: "Communication support for non-verbal children", Abstract: "We explored communication strategies for non-verbal children in clinical settings.", Criteria: I1: "Mobile app", E1: "Low tech only"
 
 DECISION: ACCEPTED
+DISCRIMINANTS: None
+JUSTIFICATION: O resumo indica o uso de estratégias de comunicação em ambiente clínico, mas não esclarece o uso de um aplicativo móvel (I1) nem afirma a ausência de recursos de alta tecnologia. Por ser ambíguo e não violar os critérios explicitamente, o artigo é aceito.
 
 ### Routine acceptance
 Input: Title: "Digital App for AAC", Abstract: "We designed a new mobile application for continuous communication.", Criteria: I1: "Mobile app", E1: "Low tech only"
 
 DECISION: ACCEPTED
+DISCRIMINANTS: None
+JUSTIFICATION: O artigo descreve explicitamente o design de um novo aplicativo móvel para comunicação, satisfazendo o critério I1 e sem violar o critério E1, resultando na aceitação.
 
 ## Success Criteria
 1. Was every criterion assessed before reaching a decision?

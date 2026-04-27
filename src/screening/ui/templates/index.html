@@ -400,12 +400,17 @@
                         badge = `<span class="bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-1 rounded-md text-xs font-bold">REJECTED</span>`;
                     }
                     
+                    let reasonText = r.justification || '';
+                    if (r.decision === 'REJECTED' && r.reasons && r.reasons.length > 0 && r.reasons !== 'None') {
+                        reasonText = `<span class="font-mono text-red-400 font-bold">[${r.reasons}]</span> ` + reasonText;
+                    }
+
                     return `
                         <tr class="hover:bg-slate-800/30 transition-colors">
                             <td class="px-6 py-4">${r.id}</td>
                             <td class="px-6 py-4 font-medium text-slate-200">${r.title.substring(0, 100)}${r.title.length > 100 ? '...' : ''}</td>
                             <td class="px-6 py-4 text-center">${badge}</td>
-                            <td class="px-6 py-4 text-xs text-slate-400">${r.decision === 'ACCEPTED' ? '-' : r.reasons}</td>
+                            <td class="px-6 py-4 text-xs text-slate-400">${reasonText}</td>
                         </tr>
                     `;
                 }).join('');

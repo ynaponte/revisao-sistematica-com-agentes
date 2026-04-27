@@ -44,12 +44,10 @@ def parse_regex_output(state: ScreeningState) -> OutputState:
 
     if just_match:
         justification = just_match.group(1).strip()
-    elif decision == "ACCEPTED":
-        justification = ""  # Não é necessária justificativa se aceito
     elif not decision_match:
-        justification = f"Parse Error. Raw Output: {response_text}"
+        justification = f"Erro no Parse. Saída original: {response_text}"
     else:
-        justification = "" # Campo omitido
+        justification = "Justificativa não fornecida pelo agente."
 
     return {
         "decision": decision,

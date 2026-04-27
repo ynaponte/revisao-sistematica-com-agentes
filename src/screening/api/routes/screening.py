@@ -127,7 +127,8 @@ async def process_articles_task(
                     "id": article.id,
                     "title": article.title,
                     "decision": result.get("decision", "ERROR"),
-                    "reasons": ", ".join(result.get("rejection_reasons", []))
+                    "reasons": ", ".join(result.get("rejection_reasons", [])),
+                    "justification": result.get("justification", "")
                 })
                 
                 # Atraso de segurança para não sobrecarregar LLMs locais (ex: Ollama)
