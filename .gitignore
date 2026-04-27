@@ -12,3 +12,9 @@ wheels/
 # envs
 .env
 *.log
+
+# Misc files
+*.csv
+*.xls
+*.xlsx
+*.txt
