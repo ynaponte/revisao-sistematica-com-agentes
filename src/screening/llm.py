@@ -61,7 +61,10 @@ def _create_ollama() -> BaseChatModel:
     from langchain_ollama import ChatOllama
 
     model = os.getenv("OLLAMA_MODEL", "llama3.1")
-    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    
+    is_docker = os.path.exists("/.dockerenv")
+    default_host = "host.docker.internal" if is_docker else "localhost"
+    base_url = os.getenv("OLLAMA_BASE_URL", f"http://{default_host}:11434")
 
     return ChatOllama(
         model=model,
@@ -75,7 +78,10 @@ def _create_vllm() -> BaseChatModel:
     from langchain_openai import ChatOpenAI
 
     model = os.getenv("VLLM_MODEL", "meta-llama/Llama-3-8b-instruct")
-    base_url = os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1")
+    
+    is_docker = os.path.exists("/.dockerenv")
+    default_host = "host.docker.internal" if is_docker else "localhost"
+    base_url = os.getenv("VLLM_BASE_URL", f"http://{default_host}:8000/v1")
     api_key = os.getenv("VLLM_API_KEY", "EMPTY")  # vLLM will accept any string if no auth is configured
 
     return ChatOpenAI(
