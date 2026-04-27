@@ -3,6 +3,7 @@
 import asyncio
 import json
 import uuid
+import logging
 from pathlib import Path
 from typing import Dict, Any
 
@@ -21,6 +22,9 @@ router = APIRouter(prefix="/api")
 # In-memory job tracker for the MVP
 # Structure: { job_id: {"status": "running"|"completed"|"failed", "progress": 0, "total": 0, "output_path": str, "error": str} }
 jobs: Dict[str, Dict[str, Any]] = {}
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -62,13 +66,18 @@ async def process_articles_task(
                     )
                     result = output
                 except Exception as e:
+                    logger.error(f"Erro ao processar artigo {article.id}: {str(e)}", exc_info=True)
                     result = {
                         "decision": "REJECTED",
-                        "rejection_reasons": ["ERROR"],
+                        "rejection_reasons": [f"API ERROR: {str(e)}"],
                         "justification": f"Processing error: {e}",
                     }
                 
                 jobs[job_id]["progress"] += 1
+                
+                # Atraso de segurança para não sobrecarregar LLMs locais (ex: Ollama)
+                await asyncio.sleep(10)
+                
                 return result
 
         tasks = [process_single(article) for article in articles]
@@ -78,9 +87,10 @@ async def process_articles_task(
         results_summary = []
         for article, r in zip(articles, results):
             if isinstance(r, BaseException):
+                logger.error(f"Erro de sistema no gather para artigo {article.id}: {str(r)}", exc_info=True)
                 res = {
                         "decision": "REJECTED",
-                        "rejection_reasons": ["ERROR"],
+                        "rejection_reasons": [f"SYSTEM ERROR: {str(r)}"],
                         "justification": f"System error: {r}",
                 }
             else:

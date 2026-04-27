@@ -335,7 +335,7 @@
     function startPolling() {
         if (pollingInterval) return;
         pollJobStatus(); // initial call
-        pollingInterval = setInterval(pollJobStatus, 2000);
+        pollingInterval = setInterval(pollJobStatus, 10000);
     }
 
     async function pollJobStatus() {
