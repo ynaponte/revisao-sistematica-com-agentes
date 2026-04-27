@@ -76,22 +76,31 @@
             </div>
         </div>
 
-        <!-- Step 3: Provider -->
+        <!-- Step 3: Provider & Concurrency -->
         <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6 transition-colors flex justify-between items-center flex-wrap gap-4">
             <div>
                 <h3 class="text-xl font-semibold flex items-center gap-3">
                     <div class="bg-blue-500/20 w-10 h-10 rounded-lg flex items-center justify-center">
-                        <i class="fa-solid fa-microchip text-blue-400"></i>
+                        <i class="fa-solid fa-gears text-blue-400"></i>
                     </div>
-                    3. AI Provider
+                    3. Execution Settings
                 </h3>
             </div>
-            <select id="provider" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer text-slate-200">
-                <option value="gemini">Google Gemini (Recommended)</option>
-                <option value="openai">OpenAI GPT</option>
-                <option value="vllm">vLLM (Local)</option>
-                <option value="ollama">Ollama (Local)</option>
-            </select>
+            <div class="flex gap-4 items-center">
+                <div class="flex flex-col">
+                    <label for="concurrency" class="text-xs text-slate-400 mb-1">Concurrency (Max Async Jobs)</label>
+                    <input type="number" id="concurrency" min="1" max="50" value="2" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 transition-colors w-24 text-slate-200">
+                </div>
+                <div class="flex flex-col">
+                    <label for="provider" class="text-xs text-slate-400 mb-1">AI Provider</label>
+                    <select id="provider" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer text-slate-200">
+                        <option value="gemini">Google Gemini (Recommended)</option>
+                        <option value="openai">OpenAI GPT</option>
+                        <option value="vllm">vLLM (Local)</option>
+                        <option value="ollama">Ollama (Local)</option>
+                    </select>
+                </div>
+            </div>
         </div>
         
         <div class="mt-8 flex justify-center">
@@ -288,11 +297,13 @@
         submitIcon.className = "fa-solid fa-spinner fa-spin";
 
         const provider = document.getElementById('provider').value;
+        const concurrency = document.getElementById('concurrency').value;
         const formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('inclusion', JSON.stringify(inclusionCriteria));
         formData.append('exclusion', JSON.stringify(exclusionCriteria));
         formData.append('provider', provider);
+        formData.append('concurrency', concurrency);
 
         try {
             const res = await fetch('/api/screen', {
