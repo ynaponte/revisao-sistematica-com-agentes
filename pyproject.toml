@@ -1,6 +1,6 @@
 [project]
 name = "revisao-sistematica-com-agentes"
-version = "0.1.0"
+version = "1.0.0"
 description = "AI-powered screening agent for systematic review triage"
 readme = "README.md"
 requires-python = ">=3.12"
