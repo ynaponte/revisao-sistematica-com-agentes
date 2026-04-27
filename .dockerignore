@@ -1,0 +1,9 @@
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+uploads/
+.env
+screening.log
+plano_de_implementacao.md
