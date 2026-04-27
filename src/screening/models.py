@@ -23,6 +23,7 @@ class OutputState(TypedDict):
     decision: str
     rejection_reasons: list[str]
     justification: str
+    tokens: int
 
 
 @dataclass

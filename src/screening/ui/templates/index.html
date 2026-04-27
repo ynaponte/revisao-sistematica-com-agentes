@@ -381,8 +381,8 @@
             // Update progress & tokens
             document.getElementById('dash-progress').textContent = data.progress;
             document.getElementById('dash-total').textContent = data.total;
-            if (data.total_tokens) {
-                document.getElementById('dash-tokens').textContent = data.total_tokens.toLocaleString();
+            if (data.global_tokens !== undefined) {
+                document.getElementById('dash-tokens').textContent = data.global_tokens.toLocaleString();
             }
             const pct = data.total > 0 ? (data.progress / data.total) * 100 : 0;
             document.getElementById('dash-progress-bar').style.width = `${pct}%`;

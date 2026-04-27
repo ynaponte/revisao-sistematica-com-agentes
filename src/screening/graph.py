@@ -29,7 +29,19 @@ async def agent_node(state: ScreeningState, runtime: Runtime[ScreeningContext]) 
 
 
 def parse_regex_output(state: ScreeningState) -> OutputState:
-    response_text = state["messages"][-1].content
+    last_msg = state["messages"][-1]
+    response_text = last_msg.content if not isinstance(last_msg, dict) else last_msg.get("content", "")
+    
+    tokens = 0
+    if isinstance(last_msg, dict):
+        usage = last_msg.get("usage_metadata") or {}
+        tokens = usage.get("total_tokens", 0)
+    else:
+        usage = getattr(last_msg, "usage_metadata", None) or {}
+        if isinstance(usage, dict):
+            tokens = usage.get("total_tokens", 0)
+        elif hasattr(usage, "total_tokens"):
+            tokens = getattr(usage, "total_tokens", 0)
     
     decision_match = re.search(r"DECISION:\s*(ACCEPTED|REJECTED)", response_text, re.IGNORECASE)
     discr_match = re.search(r"DISCRIMINANTS[^:]*:\s*(.*)", response_text, re.IGNORECASE)
@@ -52,7 +64,8 @@ def parse_regex_output(state: ScreeningState) -> OutputState:
     return {
         "decision": decision,
         "rejection_reasons": discriminants,
-        "justification": justification
+        "justification": justification,
+        "tokens": tokens
     }
 
 def build_graph() -> CompiledStateGraph[ScreeningState, ScreeningContext, ScreeningState, OutputState]:

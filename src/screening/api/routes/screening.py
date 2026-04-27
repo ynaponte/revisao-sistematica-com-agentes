@@ -23,6 +23,7 @@ router = APIRouter(prefix="/api")
 # In-memory job tracker for the MVP
 # Structure: { job_id: {"status": "running"|"completed"|"failed", "progress": 0, "total": 0, "output_path": str, "error": str, "cancelled": bool, "results_summary": list, "total_tokens": int} }
 jobs: Dict[str, Dict[str, Any]] = {}
+global_tokens_counter: int = 0
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -96,19 +97,12 @@ async def process_articles_task(
                         config=config,
                         context=context,
                     )
-                    
-                    tokens = 0
-                    if "messages" in output and output["messages"]:
-                        last_msg = output["messages"][-1]
-                        if hasattr(last_msg, "usage_metadata") and last_msg.usage_metadata:
-                            tokens = last_msg.usage_metadata.get("total_tokens", 0)
-
                     # Extrair APENAS os campos finais para liberar memoria (GC) das mensagens
                     result = {
                         "decision": output.get("decision", "ERROR"),
                         "rejection_reasons": output.get("rejection_reasons", []),
                         "justification": output.get("justification", ""),
-                        "tokens": tokens
+                        "tokens": output.get("tokens", 0)
                     }
                 except Exception as e:
                     logger.error(f"Erro ao processar artigo {article.id}: {str(e)}", exc_info=True)
@@ -121,6 +115,9 @@ async def process_articles_task(
                 
                 jobs[job_id]["progress"] += 1
                 jobs[job_id]["total_tokens"] += result.get("tokens", 0)
+                
+                global global_tokens_counter
+                global_tokens_counter += result.get("tokens", 0)
                 
                 # Update live summary
                 jobs[job_id]["results_summary"].append({
@@ -223,7 +220,9 @@ async def get_job_status(job_id: str):
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     
-    return jobs[job_id]
+    data = jobs[job_id].copy()
+    data["global_tokens"] = global_tokens_counter
+    return data
 
 
 @router.get("/jobs/{job_id}/download")
