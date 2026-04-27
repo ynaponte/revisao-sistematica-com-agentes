@@ -32,6 +32,7 @@ async def process_articles_task(
     inclusion: list[str],
     exclusion: list[str],
     provider: str,
+    concurrency: int,
 ):
     """Background task that runs the AI screening graph."""
     try:
@@ -46,7 +47,7 @@ async def process_articles_task(
         graph = build_graph()
         context: ScreeningContext = {"provider": provider}
         
-        semaphore = asyncio.Semaphore(2)
+        semaphore = asyncio.Semaphore(concurrency)
         
         async def process_single(article: Article):
             async with semaphore:
@@ -119,7 +120,8 @@ async def start_screening(
     file: UploadFile = File(...),
     inclusion: str = Form(...),  
     exclusion: str = Form(...),  
-    provider: str = Form("gemini")
+    provider: str = Form("gemini"),
+    concurrency: int = Form(2)
 ):
     """Endpoint to upload a file and start the screening process."""
     try:
@@ -150,7 +152,8 @@ async def start_screening(
         file_path=file_path,
         inclusion=inc_list,
         exclusion=exc_list,
-        provider=provider
+        provider=provider,
+        concurrency=concurrency
     )
 
     return {"job_id": job_id, "message": "Screening started"}
