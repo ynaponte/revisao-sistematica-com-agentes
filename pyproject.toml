@@ -23,5 +23,4 @@ dependencies = [
 ]
 
 [project.scripts]
-screening = "screening.main:main"
 screening-api = "screening.api.server:main"
